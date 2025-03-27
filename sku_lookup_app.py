@@ -3,18 +3,18 @@ import streamlit as st
 
 @st.cache_data
 def load_sku_database():
-    # Use your raw GitHub file URL here
+    # Replace with your raw GitHub file URL
     file_url = "https://view.officeapps.live.com/op/view.aspx?src=https%3A%2F%2Fraw.githubusercontent.com%2Fsgolson20%2FSKU-AP%2Frefs%2Fheads%2Fmain%2FSKU%2520NUMBERS%2520FINAL%2520-%2520SO.xlsx&wdOrigin=BROWSELINK"
     
-    # Load the Excel file directly from the URL
-    xls = pd.ExcelFile(file_url)
+    # Load the Excel file from the URL, explicitly setting the engine to 'openpyxl'
+    xls = pd.ExcelFile(file_url, engine='openpyxl')  # Specify the engine here
     sku_lookup = {}
     all_descriptions = []
     
     for sheet in xls.sheet_names:
         try:
             # Read the 'SKU' and 'Description' columns from the file
-            df = pd.read_excel(xls, sheet_name=sheet, usecols=lambda x: x.lower() in ['sku', 'description'])
+            df = pd.read_excel(xls, sheet_name=sheet, usecols=lambda x: x.lower() in ['sku', 'description'], engine='openpyxl')
             df = df.dropna(subset=['SKU', 'Description'])  # Remove rows with missing data
             sku_lookup.update(dict(zip(df['SKU'].astype(str), df['Description'].astype(str))))  # Add SKUs to the lookup dictionary
             all_descriptions.append(df['Description'].astype(str))  # Collect descriptions for reverse search
@@ -48,7 +48,7 @@ def main():
             if batch_file.name.endswith(".csv"):
                 batch_df = pd.read_csv(batch_file)
             else:
-                batch_df = pd.read_excel(batch_file)
+                batch_df = pd.read_excel(batch_file, engine='openpyxl')  # Specify engine for local files too
 
             sku_col = next((col for col in batch_df.columns if col.lower() == 'sku'), None)
             if sku_col is None:
