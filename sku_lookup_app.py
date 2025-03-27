@@ -1,24 +1,36 @@
 import pandas as pd
 import streamlit as st
+import requests
+from io import BytesIO
 
 @st.cache_data
 def load_sku_database():
-    # Replace with your raw GitHub file URL
+    # GitHub raw file URL
     file_url = "https://view.officeapps.live.com/op/view.aspx?src=https%3A%2F%2Fraw.githubusercontent.com%2Fsgolson20%2FSKU-AP%2Frefs%2Fheads%2Fmain%2FSKU%2520NUMBERS%2520FINAL%2520-%2520SO.xlsx&wdOrigin=BROWSELINK"
+
+    # Download the Excel file using requests
+    response = requests.get(file_url)
     
-    # Load the Excel file from the URL, explicitly setting the engine to 'openpyxl'
-    xls = pd.ExcelFile(file_url, engine='openpyxl')  # Specify the engine here
+    if response.status_code == 200:
+        # Read the content of the file into a BytesIO object
+        file_content = BytesIO(response.content)
+        # Load the Excel file from the BytesIO object
+        xls = pd.ExcelFile(file_content, engine='openpyxl')
+    else:
+        raise Exception(f"Failed to download file. Status code: {response.status_code}")
+
     sku_lookup = {}
     all_descriptions = []
     
     for sheet in xls.sheet_names:
         try:
-            # Read the 'SKU' and 'Description' columns from the file
+            # Read 'SKU' and 'Description' columns
             df = pd.read_excel(xls, sheet_name=sheet, usecols=lambda x: x.lower() in ['sku', 'description'], engine='openpyxl')
             df = df.dropna(subset=['SKU', 'Description'])  # Remove rows with missing data
-            sku_lookup.update(dict(zip(df['SKU'].astype(str), df['Description'].astype(str))))  # Add SKUs to the lookup dictionary
+            sku_lookup.update(dict(zip(df['SKU'].astype(str), df['Description'].astype(str))))  # Add SKUs to lookup dictionary
             all_descriptions.append(df['Description'].astype(str))  # Collect descriptions for reverse search
-        except:
+        except Exception as e:
+            st.error(f"Error reading sheet {sheet}: {e}")
             continue
     
     description_df = pd.concat(all_descriptions, ignore_index=True)
